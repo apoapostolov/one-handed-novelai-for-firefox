@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "NovelAI Hotkeys",
+  "name": "One-Handed NovelAI",
   "version": "1.0.0",
-  "description": "On novelai.net/image press G to generate the next image and H to save it. All shortcuts are customizable.",
+  "description": "Press Z to generate the next image and X to save it on novelai.net/image. Repeat saves are skipped. All shortcuts are customizable.",
   "browser_specific_settings": {
     "gecko": {
       "id": "novelai-hotkeys@apoapostolov",
@@ -34,7 +34,7 @@
     }
   ],
   "action": {
-    "default_title": "NovelAI Hotkeys - click to customize",
+    "default_title": "One-Handed NovelAI - click to customize",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "assets/icon-16.png",

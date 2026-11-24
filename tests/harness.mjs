@@ -101,6 +101,18 @@ const document = {
   defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) },
   createElement(tag) {
     const element = new El(tag, document);
+    if (String(tag).toLowerCase() === 'canvas') {
+      // A stub 2d context: pixels come from the image the extension draws, and
+      // an image without pixels stands in for a cross-origin canvas taint.
+      const context = {
+        drawImage(img) { context.image = img; },
+        getImageData() {
+          if (!context.image || !context.image._pixels) throw new Error('tainted canvas');
+          return { data: context.image._pixels };
+        }
+      };
+      element.getContext = () => context;
+    }
     created.push(element);
     return element;
   },
@@ -152,11 +164,12 @@ const windowStub = {
 let currentSettings = baseSettings();
 const changeListeners = [];
 const sent = [];
+const stored = [];
 const browser = {
   storage: {
     local: {
       get: async () => ({ settings: structuredClone(currentSettings) }),
-      set: async () => {}
+      set: async (value) => { stored.push(structuredClone(value)); }
     },
     onChanged: { addListener(fn) { changeListeners.push(fn); } }
   },
@@ -198,6 +211,15 @@ function applySettings(next) {
 function anchorDownloads() {
   return created.filter((el) => el.tagName === 'A' &&
     /^novelai-\d{8}-\d{6}(?:-\d+)?\.(?:png|webp|jpg)$/.test(el.download));
+}
+
+function toastText() {
+  const box = body.children.find((child) => child.id === 'nai-hk-toast');
+  return box ? String(box.textContent) : '';
+}
+
+function ledgerWrites() {
+  return stored.filter((value) => Array.isArray(value.downloadHistory));
 }
 
 const zEvent = fire('KeyZ', 'z');
@@ -244,8 +266,24 @@ applySettings(batch);
 const beforeBatch = anchorDownloads().length;
 fire('KeyK', 'k');
 await new Promise((resolve) => setImmediate(resolve));
-check('save batch downloads both images', anchorDownloads().length === beforeBatch + 2,
+check('save batch adds the image that was not saved yet', anchorDownloads().length === beforeBatch + 1,
   `delta=${anchorDownloads().length - beforeBatch}`);
+
+const beforeRepeat = anchorDownloads().length;
+fire('KeyK', 'k');
+await new Promise((resolve) => setImmediate(resolve));
+check('save batch skips images that are already downloaded',
+  anchorDownloads().length === beforeRepeat, `delta=${anchorDownloads().length - beforeRepeat}`);
+check('the skip is reported to the user', /already downloaded/i.test(toastText()), toastText());
+
+const repeatX = anchorDownloads().length;
+fire('KeyX', 'x');
+await new Promise((resolve) => setImmediate(resolve));
+check('pressing the save key twice keeps one copy on disk',
+  anchorDownloads().length === repeatX, `anchors=${anchorDownloads().length}`);
+check('the ledger records the saved file', ledgerWrites().some((value) =>
+  value.downloadHistory.some((entry) => /novelai-\d{8}-\d{6}\.(?:png|webp|jpg)/.test(entry.filename))),
+  `writes=${ledgerWrites().length}`);
 
 const remoteImage = new El('img', document);
 remoteImage.src = 'https://static.novelai.net/generated/123.png';
@@ -257,6 +295,56 @@ await new Promise((resolve) => setImmediate(resolve));
 check('remote image goes to the download bridge', sent.length === 1 &&
   sent[0].type === 'nai-download' && sent[0].url.includes('static.novelai.net'),
   `messages=${sent.length}`);
+
+fire('KeyX', 'x');
+await new Promise((resolve) => setImmediate(resolve));
+check('a remote image is not bridged twice', sent.length === 1, `messages=${sent.length}`);
+
+const freshImage = new El('img', document);
+freshImage.src = 'https://static.novelai.net/generated/456.png';
+freshImage.naturalWidth = 1216;
+images.push(freshImage);
+fire('KeyX', 'x');
+await new Promise((resolve) => setImmediate(resolve));
+check('an image that was not saved yet still downloads', sent.length === 2 &&
+  sent[1].url.includes('456.png'), `messages=${sent.length}`);
+
+// A regenerated blob URL for the same pixels must not download a second copy.
+const blobImage = new El('img', document);
+blobImage.src = 'blob:https://novelai.net/11111111';
+blobImage.naturalWidth = 1600;
+blobImage.naturalHeight = 900;
+blobImage._pixels = new Uint8ClampedArray([12, 34, 56, 255]);
+images.push(blobImage);
+const beforeBlob = anchorDownloads().length;
+fire('KeyX', 'x');
+await new Promise((resolve) => setImmediate(resolve));
+check('a blob image downloads once', anchorDownloads().length === beforeBlob + 1,
+  `delta=${anchorDownloads().length - beforeBlob}`);
+
+const blobTwin = new El('img', document);
+blobTwin.src = 'blob:https://novelai.net/22222222';
+blobTwin.naturalWidth = 1600;
+blobTwin.naturalHeight = 900;
+blobTwin._pixels = new Uint8ClampedArray([12, 34, 56, 255]);
+images.push(blobTwin);
+const beforeTwin = anchorDownloads().length;
+fire('KeyX', 'x');
+await new Promise((resolve) => setImmediate(resolve));
+check('the same pixels under a fresh blob URL are skipped',
+  anchorDownloads().length === beforeTwin, `delta=${anchorDownloads().length - beforeTwin}`);
+
+const differentPixels = new El('img', document);
+differentPixels.src = 'blob:https://novelai.net/33333333';
+differentPixels.naturalWidth = 1600;
+differentPixels.naturalHeight = 900;
+differentPixels._pixels = new Uint8ClampedArray([12, 34, 57, 255]);
+images.push(differentPixels);
+const beforeDifferent = anchorDownloads().length;
+fire('KeyX', 'x');
+await new Promise((resolve) => setImmediate(resolve));
+check('different pixels still download', anchorDownloads().length === beforeDifferent + 1,
+  `delta=${anchorDownloads().length - beforeDifferent}`);
 
 // Custom selector overrides auto-detection.
 const customButton = new El('button', document);

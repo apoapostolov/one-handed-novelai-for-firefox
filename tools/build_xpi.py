@@ -3,8 +3,17 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-version = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))["version"]
-output = ROOT / f"novelai-hotkeys-{version}.xpi"
+
+
+def read_version():
+    try:
+        return json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError) as error:
+        raise SystemExit(f"cannot read the version from manifest.json: {error}") from error
+
+
+version = read_version()
+output = ROOT / f"one-handed-novelai-{version}.xpi"
 
 files = [
     "manifest.json",
