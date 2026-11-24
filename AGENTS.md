@@ -7,7 +7,7 @@ This repository is the Firefox build of One-Handed NovelAI. The Chrome build liv
 | `apoapostolov/one-handed-novelai-for-firefox` (this one) | Firefox 140 or newer | `one-handed-novelai-<version>.xpi`, unsigned, loaded with signature checks off |
 | `apoapostolov/one-handed-novelai-for-chrome` | Chrome 110 or newer | `one-handed-novelai-for-chrome-<version>.zip`, loaded unpacked |
 
-Local checkouts: this repository at `C:/git-public/novelai-hotkeys`, the Chrome repository at `C:/git-public/one-handed-novelai-for-chrome`.
+Local checkouts: this repository at `C:/git-public/one-handed-novelai-for-firefox`, the Chrome repository at `C:/git-public/one-handed-novelai-for-chrome`.
 
 ## Shared code is one copy in two repositories
 
@@ -49,7 +49,7 @@ Versions are not kept in step. A shared fix ships as its own release on each sid
    ```bash
    cd C:/git-public
    for f in content.js content.css popup.html popup.js popup.css; do
-     cmp -s novelai-hotkeys/$f one-handed-novelai-for-chrome/$f \
+     cmp -s one-handed-novelai-for-firefox/$f one-handed-novelai-for-chrome/$f \
        && echo "same  $f" || echo "DIFF  $f"
    done
    ```
