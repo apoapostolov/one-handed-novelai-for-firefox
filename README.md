@@ -45,7 +45,7 @@ The extension recognises an image by a downscaled fingerprint of its pixels, so 
 
 ## Install
 
-The 1.0.0 xpi is attached to the [release](https://github.com/apoapostolov/one-handed-novelai-for-firefox/releases/tag/v1.0.0) under its original `novelai-hotkeys-1.0.0.xpi` filename. The current build is `one-handed-novelai-1.1.0.xpi` in the repository root. It is built locally and is not signed by Mozilla, so Firefox will not install it from a normal download link.
+The 1.0.1 xpi is attached to the [release](https://github.com/apoapostolov/one-handed-novelai-for-firefox/releases/tag/v1.0.1) and kept in the repository root as `one-handed-novelai-1.0.1.xpi`. It is built locally and is not signed by Mozilla, so Firefox will not install it from a normal download link.
 
 For a temporary load:
 
